@@ -137,6 +137,59 @@ window.addEventListener('keydown', (event)=>{
 
 
 
+
+/** C  L   A   S   S   E   S**/
+
+class RLSnake(){
+    constructor(){
+        this.apple = 0.2
+        this.gamma = 0.2
+        this.noEatLoopCount = 0
+        this.maxNoEatLoopCount = 500
+        this.isAheadClearIndex = 0
+        this.isLeftClearIndex = 1
+        this.isRightClearIndex = 2
+        this.isAppleAheadIndex = 3
+        this.isAppleLeftIndex = 4
+        this.isAppleRightIndex = 5
+        this.initialState = [1,1,1,0,0,0]
+        this.state = this.initialState
+        this.Q_table = {}
+    }
+
+    calculateState(){
+
+    }
+
+    update(){
+
+    }
+
+    reward(state, action){
+
+    }
+
+    implementAction(action){
+
+    }
+
+    getQ(state, action){
+
+    }
+
+    setQ(state, action){
+
+    }
+
+    getAction(action){
+
+    }
+
+    checkDirections(){
+
+    }
+}
+
 class Snake{
 
     constructor(){
@@ -211,3 +264,4 @@ class Apple{
 
 const snake = new Snake();
 let apple = new Apple();
+
