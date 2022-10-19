@@ -73,13 +73,24 @@ var apple = new Apple();
 
 var canvasContext = canvas.getContext('2d');
 
+let gameSpeed = 10
+//connect to canvas using 'gameSpeed'
+let gameSpeedElement = document.getElementById('gameSpeed')
+
+
+let highScore = 0 
+let highScoreElement = document.getElementById('highScore')
+
+let averageScore = 0
+let epochNumber = 0
+
 //work game
 window.onload = ()=>{
     gameLoop();
 }
 
 function gameLoop(){
-    setInterval(show, 1000/15) // fps
+    setInterval(show, 1000/gameSpeed) // fps
 }
 
 function show(){
@@ -94,12 +105,34 @@ function update(){
 
     snake.move();
     eatApple();
-    checkHitWall();
+    checkCollision();
+}
+
+function gameOver(){
+    highScore = Math.max(highScore, snake.tail.length - 1)
+    highScoreElement.textContent = highScore
 }
 
 
-function checkHitWall(){
+function checkCollision(){
     var headTail = snake.tail[snake.tail.length - 1]
+
+    //wall collision
+    if( headTail.x <= -snake.size || headTail.x >= -canvas.width ||
+        headTail.y <= -snake.size || headTail.y >= -canvas.height){
+            gameOver()
+            return
+        }
+    
+    //self collision
+    for(let i=0; i<snake.tail.length - 2; i++){
+        if(headTail.x == snake.tail[i].x && headTail.y == snake.tail[i].y){
+            gameOver();
+            return
+        }
+    }
+
+    /* appear up down left and right
     if(headTail.x == - snake.size){
         headTail.x = canvas.width - snake.size
     }else if(headTail.x == canvas.width){
@@ -108,7 +141,7 @@ function checkHitWall(){
         headTail.y = canvas.height - snake.size
     }else if(headTail.y == canvas.height){
         headTail.y = 0
-    }
+    }*/
 }
 
 
