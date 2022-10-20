@@ -17,8 +17,15 @@ let averageScoreElement = document.getElementById('averageScore')
 let epochNumber = 0
 let epochNumberElement = document.getElementById('epochNumber')
 
+let appleEated = false
+let size = 20
+let gameInterval
+
 gameSpeedElement.addEventListener('change', () =>{
-    gameSpeed = parseInt(gameSpeedElement.textContent)
+    gameSpeed = parseInt(gameSpeedElement.value)
+    console.log(gameSpeed)
+    clearInterval(gameInterval)
+    gameLoop()
 })
 
 //work game
@@ -27,7 +34,7 @@ window.onload = () => {
 }
 
 function gameLoop(){
-    setInterval(show, 1000/gameSpeed) // fps
+    gameInterval = setInterval(show, 1000/gameSpeed) // fps
 }
 
 function show(){
@@ -42,7 +49,10 @@ function update(){
 
     snake.move();
     eatApple();
+    rlSnake.update();
     checkCollision();
+    appleEated = false
+    
 }
 
 function gameOver(){
@@ -89,7 +99,8 @@ function checkCollision(){
 function eatApple(){
     if(snake.tail[snake.tail.length - 1].x == apple.x && snake.tail[snake.tail.length - 1].y == apple.y){
         snake.tail[snake.tail.length] = {x:apple.x, y: apple.y}
-        apple = new Apple();        
+        apple = new Apple();  
+        appleEated = true      
     }
 }
 
@@ -143,7 +154,7 @@ window.addEventListener('keydown', (event)=>{
 class RLSnake{
 
     constructor(){
-        this.apple = 0.2
+        this.alpha = 0.2
         this.gamma = 0.2
         this.noEatLoopCount = 0
         this.maxNoEatLoopCount = 500
@@ -169,6 +180,7 @@ class RLSnake{
 
         let action = this.getAction(this.state)
         this.implementAction(action)
+        //console.log(this.Q_table)
     }
 
     reward(state, action){
@@ -177,18 +189,18 @@ class RLSnake{
         let futureState = this.state
 
         let stringifiedCurrentState = JSON.stringify(state)
-        let stringifiedFutureState = JSON.size(futureState)
+        let stringifiedFutureState = JSON.stringify(futureState)
 
         if(stringifiedCurrentState != stringifiedFutureState){
             if( (state[0] == 0 && action == 0) ||
                 (state[1] == 0 && action == 1) ||
-                (state[2] == 0 && action == 2)){
+                (state[1] == 0 && action == 2)){
                     rewardForState -= 1
                 }
             
             if( (state[this.isAheadClearIndex] == 1 && action == 0 && state[this.isAppleAheadIndex] == 1) ||
-                (state[this.isLeftClearIndex] == 1 && action == 0 && state[this.isAppleLeftIndex] == 1) ||
-                (state[this.isRightClearIndex] == 1 && action == 0 && state[this.isAppleRightIndex] == 1)){
+                (state[this.isLeftClearIndex] == 1 && action == 1 && state[this.isAppleLeftIndex] == 1) ||
+                (state[this.isRightClearIndex] == 1 && action == 2 && state[this.isAppleRightIndex] == 1)){
                     rewardForState += 1
                 }
         }
@@ -199,7 +211,9 @@ class RLSnake{
         )
 
         let updateValue = this.alpha * 
-                            (rewardForState + this.gamma * optimumFutureValue - this.getQ(state, action)) -
+                            (rewardForState + 
+                                this.gamma * optimumFutureValue -
+                                this.getQ(state, action)) -
                             0.0001;
         
         this.setQ(state, action, updateValue)
@@ -208,8 +222,26 @@ class RLSnake{
     }
 
     implementAction(action){
+        if(typeof action === 'undefined') return
+        if(!action) return
+        if(action == 0) return
 
-    }
+        let isRight = action == 2 ? -1 : 1
+
+        if(snake.rotateX == 1){
+            snake.rotateY = -1 * isRight
+            snake.rotateX = 0
+        }else if(snake.rotateX == -1){
+            snake.rotateY = 1 * isRight
+            snake.rotateX = 0
+        }else if(snake.rotateY == 1){
+            snake.rotateX = 1 * isRight
+            snake.rotateY = 0
+        }else if(snake.rotateY == -1){
+            snake.rotateX = -1 * isRight
+            snake.rotateY = 0
+        }
+    } 
 
     getQ(state, action){
         let config = state.slice()
@@ -227,6 +259,7 @@ class RLSnake{
             this.Q_table[config] = 0
         }
         this.Q_table[config] += reward
+        console.log(this.Q_table)
     }
 
     getAction(state){
@@ -238,9 +271,25 @@ class RLSnake{
         let items = Object.keys(q).map( (key) => {
             return [key, q[key]]
         })
+
+        items.sort((first, second) => {
+            return second[1] - first[1]
+        })
+
         q = items
 
-        // https://youtu.be/d6-8Y9kZ71k?t=1821
+        if(!appleEated){
+            this.noEatLoopCount++
+        }
+
+        if(this.noEatLoopCount > this.maxNoEatLoopCount){
+            this.noEatLoopCount = 0
+            gameOver()
+            return
+        }
+        
+        let key = Object.entries(q).sort((x, y) => y[1] - x[1])[0]
+        return parseInt(key[1][0])
     }
 
     checkDirections(){
@@ -250,20 +299,20 @@ class RLSnake{
         let ry = snake.rotateY
 
         //wall
-        if( (rx == 1 && headTail.y + size == canvas.height) || (ry == 1 && headTail.x == 0) || 
-            (ry == -1 && headTail.x + size == canvas.width) || (rx == -1 && headTail.x == 0)){
+        if( (ry == 1 && headTail.x == 0) || (rx == 1 && headTail.y + size == canvas.height) ||  
+            (ry == -1 && headTail.x + size == canvas.width) || (rx == -1 && headTail.y == 0)){
                 this.state[this.isRightClearIndex] = 0
         }
 
         
-        if( (rx == 1 && headTail.x + size == canvas.width) || (ry == 1 && headTail.y == canvas.height) || 
-            (ry == -1 && headTail.x == 0) || (rx == -1 && headTail.x == 0)){
+        if( (ry == 1 && headTail.y + size == canvas.height) || (rx == 1 && headTail.x + size == canvas.width) ||  
+            (ry == -1 && headTail.y == 0) || (rx == -1 && headTail.x == 0)){
                 this.state[this.isAheadClearIndex] = 0
         }
         
             
-        if( (rx == 1 && headTail.y == 0) || (ry == 1 && headTail.x + size == canvas.width) || 
-            (ry == -1 && headTail.x == 0) || (rx == -1 && headTail.x + size == canvas.height)){
+        if( (ry == 1 && headTail.x + size == canvas.width) || (rx == 1 && headTail.y == 0) || 
+            (ry == -1 && headTail.x == 0) || (rx == -1 && headTail.y + size == canvas.height)){
             this.state[this.isLeftClearIndex] = 0
         }
 
@@ -322,7 +371,7 @@ class RLSnake{
 
             if(rx == 1 && apple.y > headTail.y){
                 index = this.isAppleRightIndex
-            }else if( rx == -1 && apple.y < headTail.y){
+            }else if( rx == 1 && apple.y < headTail.y){
                 index = this.isAppleLeftIndex
             }
 
@@ -347,7 +396,7 @@ class Snake{
 
     initVars(){
         this.x = 20;
-        this.y = 180;
+        this.y = 20;
         this.size = 20;
         this.tail = [{x: this.x, y: this.y}];
         this.rotateX = 0;
@@ -413,3 +462,4 @@ class Apple{
 
 const snake = new Snake()
 let apple = new Apple()
+let rlSnake = new RLSnake()
