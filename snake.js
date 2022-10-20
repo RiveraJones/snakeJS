@@ -140,7 +140,8 @@ window.addEventListener('keydown', (event)=>{
 
 /** C  L   A   S   S   E   S**/
 
-class RLSnake(){
+class RLSnake{
+
     constructor(){
         this.apple = 0.2
         this.gamma = 0.2
@@ -152,21 +153,58 @@ class RLSnake(){
         this.isAppleAheadIndex = 3
         this.isAppleLeftIndex = 4
         this.isAppleRightIndex = 5
-        this.initialState = [1,1,1,0,0,0]
+        this.initialState = [1,1,1,0,0,0]//action?
         this.state = this.initialState
         this.Q_table = {}
     }
 
     calculateState(){
-
+        this.state = this.initialState.slice()
+        this.checkDirections()
     }
 
     update(){
+        this.reward(this.state, this.getAction(this.state))
+        this.checkDirections()
 
+        let action = this.getAction(this.state)
+        this.implementAction(action)
     }
 
     reward(state, action){
+        let rewardForState = 0
+        this.calculateState()
+        let futureState = this.state
 
+        let stringifiedCurrentState = JSON.stringify(state)
+        let stringifiedFutureState = JSON.size(futureState)
+
+        if(stringifiedCurrentState != stringifiedFutureState){
+            if( (state[0] == 0 && action == 0) ||
+                (state[1] == 0 && action == 1) ||
+                (state[2] == 0 && action == 2)){
+                    rewardForState -= 1
+                }
+            
+            if( (state[this.isAheadClearIndex] == 1 && action == 0 && state[this.isAppleAheadIndex] == 1) ||
+                (state[this.isLeftClearIndex] == 1 && action == 0 && state[this.isAppleLeftIndex] == 1) ||
+                (state[this.isRightClearIndex] == 1 && action == 0 && state[this.isAppleRightIndex] == 1)){
+                    rewardForState += 1
+                }
+        }
+        let optimumFutureValue = Math.max(
+            this.getQ(futureState, 0),
+            this.getQ(futureState, 1),
+            this.getQ(futureState, 2)
+        )
+
+        let updateValue = this.alpha * 
+                            (rewardForState + this.gamma * optimumFutureValue - this.getQ(state, action)) -
+                            0.0001;
+        
+        this.setQ(state, action, updateValue)
+        
+                
     }
 
     implementAction(action){
@@ -174,19 +212,130 @@ class RLSnake(){
     }
 
     getQ(state, action){
-
+        let config = state.slice()
+        config.push(action)
+        if(!(config in this.Q_table)){
+            return 0
+        }
+        return this.Q_table[config]
     }
 
-    setQ(state, action){
-
+    setQ(state, action, reward){
+        let config = state.slice()
+        config.push(action)
+        if(!(config in this.Q_table)){
+            this.Q_table[config] = 0
+        }
+        this.Q_table[config] += reward
     }
 
-    getAction(action){
+    getAction(state){
+        let q = {}
+        for(let l=0; l<3; l++){
+            q[l] = this.getQ(state, l)
+        }
 
+        let items = Object.keys(q).map( (key) => {
+            return [key, q[key]]
+        })
+        q = items
+
+        // https://youtu.be/d6-8Y9kZ71k?t=1821
     }
 
     checkDirections(){
+        let correspondingSize
+        let headTail = snake.tail[snake.tail.length - 1]
+        let rx = snake.rotateX
+        let ry = snake.rotateY
 
+        //wall
+        if( (rx == 1 && headTail.y + size == canvas.height) || (ry == 1 && headTail.x == 0) || 
+            (ry == -1 && headTail.x + size == canvas.width) || (rx == -1 && headTail.x == 0)){
+                this.state[this.isRightClearIndex] = 0
+        }
+
+        
+        if( (rx == 1 && headTail.x + size == canvas.width) || (ry == 1 && headTail.y == canvas.height) || 
+            (ry == -1 && headTail.x == 0) || (rx == -1 && headTail.x == 0)){
+                this.state[this.isAheadClearIndex] = 0
+        }
+        
+            
+        if( (rx == 1 && headTail.y == 0) || (ry == 1 && headTail.x + size == canvas.width) || 
+            (ry == -1 && headTail.x == 0) || (rx == -1 && headTail.x + size == canvas.height)){
+            this.state[this.isLeftClearIndex] = 0
+        }
+
+        for(let i=0; i<snake.tail.length - 2; i++){
+            let ithTail = snake.tail[i]
+            if( rx == 0 && headTail.y == ithTail.y){
+                correspondingSize = ry == 1 ? -size: size
+                if( headTail.x = ithTail.x + correspondingSize){
+                    this.state[this.isLeftClearIndex] = 0
+                }
+                if( headTail.x == ithTail.x - correspondingSize){
+                    this.state[this.isRightClearIndex] = 0
+                }
+            }else if( ry == 0 && headTail.x == ithTail.x){
+                correspondingSize = rx == 1 ? -size: size
+                if( headTail.y = ithTail.y + correspondingSize){
+                    this.state[this.isRightClearIndex] = 0
+                }
+                if( headTail.y == ithTail.y - correspondingSize){
+                    this.state[this.isLeftClearIndex] = 0
+                }
+            }
+
+            if( rx == 0 && headTail.x == ithTail.x && headTail.y + ry * size == ithTail.y){
+                this.state[this.isAheadClearIndex = 0]   
+            }
+            
+            if( ry == 0 && headTail.y == ithTail.y && headTail.x + ry * size == ithTail.x){
+                this.state[this.isAheadClearIndex = 0]
+            }    
+        }
+
+        if(headTail.x == apple.x && ry != 0){
+            if(ry == 1 && headTail.y < apple.y)
+                this.state[this.isAppleAheadIndex] = 1
+            if(ry == -1 && headTail.y > apple.y)
+                this.state[this.isAppleAheadIndex] = 1
+        }else if(headTail.y == apple.y && rx != 0){
+            if(rx == 1 && headTail.x < apple.x)
+                this.state[this.isAppleAheadIndex] = 1
+            if(rx == -1 && headTail.x > apple.x)
+                this.state[this.isAppleAheadIndex] = 1
+        }else{
+            let index =-1
+            if(ry == 1 && apple.x > headTail.x){
+                index = this.isAppleLeftIndex
+            }else if( ry == 1 && apple.x < headTail.x){
+                index = this.isAppleRightIndex
+            }
+
+            if(ry == -1 && apple.x > headTail.x){
+                index = this.isAppleRightIndex
+            }else if( ry == -1 && apple.x < headTail.x){
+                index = this.isAppleLeftIndex
+            }
+
+            if(rx == 1 && apple.y > headTail.y){
+                index = this.isAppleRightIndex
+            }else if( rx == -1 && apple.y < headTail.y){
+                index = this.isAppleLeftIndex
+            }
+
+            if(rx == -1 && apple.y > headTail.y){
+                index = this.isAppleLeftIndex
+            }else if( rx == -1 && apple.y < headTail.y){
+                index = this.isAppleRightIndex
+            }
+
+            if(index != -1) this.state[index] = 1
+
+
+        }
     }
 }
 
@@ -262,6 +411,5 @@ class Apple{
 }
 
 
-const snake = new Snake();
-let apple = new Apple();
-
+const snake = new Snake()
+let apple = new Apple()
